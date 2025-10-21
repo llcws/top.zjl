@@ -1,5 +1,3 @@
-// 文件路径应为：src/main/java/com/crm/service/impl/CustomerServiceImpl.java
-
 package com.crm.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -10,6 +8,7 @@ import com.crm.entity.Customer;
 import com.crm.entity.SysManager;
 import com.crm.mapper.CustomerMapper;
 import com.crm.query.CustomerQuery;
+import com.crm.query.IdQuery;
 import com.crm.security.user.SecurityUser;
 import com.crm.service.CustomerService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -20,11 +19,12 @@ import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
 
+import java.rmi.ServerException;
 import java.util.List;
 
 /**
  * <p>
- * 客户服务实现类
+ *  服务实现类
  * </p>
  *
  * @author crm
@@ -32,81 +32,97 @@ import java.util.List;
  */
 @Service
 public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> implements CustomerService {
-
     @Override
     public PageResult<CustomerVO> getPage(CustomerQuery query) {
         Page<CustomerVO> page = new Page<>(query.getPage(), query.getLimit());
-        MPJLambdaWrapper<Customer> wrapper = selection(query); // 使用封装好的条件构造器
+        MPJLambdaWrapper<Customer> wrapper = selection(query);
         Page<CustomerVO> result = baseMapper.selectJoinPage(page, CustomerVO.class, wrapper);
         return new PageResult<>(result.getRecords(), result.getTotal());
     }
-
     @Override
-    public void exportCustomer(CustomerQuery query, HttpServletResponse response) {
+    public void exportCustomer(CustomerQuery query, HttpServletResponse httpResponse){
         MPJLambdaWrapper<Customer> wrapper = selection(query);
-        List<Customer> customerList = baseMapper.selectJoinList(Customer.class, wrapper);
-        ExcelUtils.writeExcel(response, customerList, "客户信息", "客户信息", CustomerVO.class);
+        List<Customer> customerList = baseMapper.selectJoinList(wrapper);
+        ExcelUtils.writeExcel(httpResponse, customerList,"客户信息","客户信息", CustomerVO.class);
+    }
+    private MPJLambdaWrapper<Customer> selection(CustomerQuery  query){
+        MPJLambdaWrapper<Customer> wrapper = new MPJLambdaWrapper<>();
+        wrapper.selectAll(Customer.class)
+                .selectAs("o", SysManager::getAccount, CustomerVO::getOwnerName)
+                .selectAs("c", SysManager::getAccount, CustomerVO::getCreaterName)
+                .leftJoin(SysManager.class, "o", SysManager::getId, Customer::getOwnerId)
+                .leftJoin(SysManager.class, "c", SysManager::getId, Customer::getCreaterId);
+        if (StringUtils.isNotBlank(query.getName())) {
+            wrapper.like(Customer::getName, query.getName());
+        }
+        if (StringUtils.isNotBlank(query.getPhone())) {
+            wrapper.like(Customer::getPhone, query.getPhone());
+        }
+        if (query.getLevel() != null) {
+            wrapper.eq(Customer::getLevel, query.getLevel());
+        }
+        if (query.getSource() != null) {
+            wrapper.eq(Customer::getSource, query.getSource());
+        }
+        if (query.getFollowStatus() != null) {
+            wrapper.eq(Customer::getFollowStatus, query.getFollowStatus());
+        }
+        if (query.getIsPublic() != null) {
+            wrapper.eq(Customer::getIsPublic, query.getIsPublic());
+        }
+        wrapper.orderByDesc(Customer::getCreateTime);
+        return wrapper;
     }
 
     @Override
-    public void saveOrUpdate(CustomerVO customerVO) {
-        LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<Customer>().eq(Customer::getPhone, customerVO.getPhone());
-
-        if (customerVO.getId() == null) {
+    public void saveOrUpdate(CustomerVO customerVO) throws ServerException {
+        LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<Customer>().eq(Customer::getName, customerVO.getPhone());
+        if (customerVO.getId() == null){
             Customer customer = baseMapper.selectOne(wrapper);
-            if (customer != null) {
-                throw new RuntimeException("该手机号客户已存在，请勿重复添加");
+            if (customer != null){
+                throw new ServerException("该手机号客户已存在，请勿重复添加");
             }
             Customer convert = CustomerConvert.INSTANCE.convert(customerVO);
             Integer managerId = SecurityUser.getManagerId();
             convert.setOwnerId(managerId);
             convert.setCreaterId(managerId);
             baseMapper.insert(convert);
-        } else {
+        }else{
             wrapper.ne(Customer::getId, customerVO.getId());
             Customer customer = baseMapper.selectOne(wrapper);
-            if (customer != null) {
-                throw new RuntimeException("该手机号客户已存在，请勿重复添加");
+            if(customer!=null){
+                throw new ServerException("该手机号客户已存在，请勿重复添加");
             }
             Customer convert = CustomerConvert.INSTANCE.convert(customerVO);
             baseMapper.updateById(convert);
         }
     }
-
-    private MPJLambdaWrapper<Customer> selection(CustomerQuery query) {
-        MPJLambdaWrapper<Customer> wrapper = new MPJLambdaWrapper<>();
-
-        wrapper.selectAll(Customer.class)
-                .selectAs("o", SysManager::getAccount, CustomerVO::getOwnerName)
-                .selectAs("c", SysManager::getAccount, CustomerVO::getCreaterName)
-                .leftJoin(SysManager.class, "o", SysManager::getId, Customer::getOwnerId)
-                .leftJoin(SysManager.class, "c", SysManager::getId, Customer::getCreaterId);
-
-        if (StringUtils.isNotBlank(query.getName())) {
-            wrapper.like(Customer::getName, query.getName());
-        }
-
-        if (StringUtils.isNotBlank(query.getPhone())) {
-            wrapper.like(Customer::getPhone, query.getPhone());
-        }
-
-        if (query.getLevel() != null) {
-            wrapper.eq(Customer::getLevel, query.getLevel());
-        }
-
-        if (query.getSource() != null) {
-            wrapper.eq(Customer::getSource, query.getSource());
-        }
-
-        if (query.getFollowStatus() != null) {
-            wrapper.eq(Customer::getFollowStatus, query.getFollowStatus());
-        }
-
-        if (query.getIsPublic() != null) {
-            wrapper.eq(Customer::getIsPublic, query.getIsPublic());
-        }
-
-        wrapper.orderByDesc(Customer::getCreateTime);
-        return wrapper;
+    @Override
+    public void removeCustomer(List<Integer> ids){
+        removeByIds(ids);
     }
+
+    @Override
+    public void customerToPublicPool(IdQuery idQuery) throws ServerException {
+        Customer customer = baseMapper.selectById(idQuery.getId());
+        if(customer == null){
+            throw new ServerException("客户不存在,无法转入公海");
+        }
+        customer.setIsPublic(1);
+        customer.setOwnerId(null);
+        baseMapper.updateById(customer);
+    }
+
+    @Override
+    public void publicPoolToPrivate(IdQuery idQuery) throws ServerException {
+        Customer customer = baseMapper.selectById(idQuery.getId());
+        if (customer == null) {
+            throw new ServerException("客户不存在,无法转入公海");
+        }
+        customer.setIsPublic(0);
+        Integer ownerId = SecurityUser.getManagerId();
+        customer.setOwnerId(ownerId);
+        baseMapper.updateById(customer);
+    }
+
 }
