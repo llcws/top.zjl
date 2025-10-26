@@ -71,6 +71,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(permits).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
+                        .requestMatchers("/common/upload/**").permitAll() // 添加这一行放行静态资源
                         .anyRequest().authenticated()
                 ).exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(new SecurityAuthenticationEntryPoint()))
                 .headers(headers -> headers.frameOptions(frameOptionsConfig -> frameOptionsConfig.disable()))

@@ -26,7 +26,6 @@ public class PermitResource {
         ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         Resource[] resources = resolver.getResources("classpath*:application.yml");
         String key = "auth.ignore_urls";
-
         return getPropertiesList(key, resources);
     }
 

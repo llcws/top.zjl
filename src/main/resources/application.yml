@@ -63,4 +63,17 @@ auth:
     - /swagger-ui.html
     - /swagger-ui/**
     - /doc.html
-    - /department/**                     # 根路径
+    - /department/**
+    - /common/upload/**
+    # 根路径
+
+aliyun:
+  oss:
+    # oss对外服务的访问域名
+    endpoint: oss-cn-hangzhou.aliyuncs.com
+    # 访问身份验证中用到用户标识
+    accessKeyId: LTAI5tLZuGYhFFEruj1nVgks
+    # 用户用于加密签名字符串和oss用来验证签名字符串的密钥
+    accessKeySecret: GsPr4p1n65Hu8HuCZi87JWcSa5vzmF
+    # oss的存储空间
+    bucketName: 35284plm
