@@ -35,18 +35,31 @@ public class LeadServiceImpl extends ServiceImpl<LeadMapper, Lead> implements Le
     public PageResult<Lead> getPage(LeadQuery query) {
         Page<Lead> page = new Page<>(query.getPage(), query.getLimit());
         LambdaQueryWrapper<Lead> wrapper = new LambdaQueryWrapper<>();
+
+        // 线索名称模糊查询
         if (StringUtils.isNotBlank(query.getName())) {
             wrapper.like(Lead::getName, query.getName());
         }
+
+        // 跟进状态精确查询
         if (query.getFollowStatus() != null) {
             wrapper.eq(Lead::getFollowStatus, query.getFollowStatus());
         }
+
+        // 线索状态精确查询
         if (query.getStatus() != null) {
             wrapper.eq(Lead::getStatus, query.getStatus());
         }
-        wrapper.orderByDesc(Lead::getCreateTime);
-        Page<Lead> leadPage = baseMapper.selectPage(page, wrapper);
 
+        // 新增：客户来源查询（根据字段类型调整判断条件）
+        if (query.getSource() != null) { // 若为String类型，用 StringUtils.isNotBlank()
+            wrapper.eq(Lead::getSource, query.getSource());
+        }
+
+        // 按创建时间降序
+        wrapper.orderByDesc(Lead::getCreateTime);
+
+        Page<Lead> leadPage = baseMapper.selectPage(page, wrapper);
         return new PageResult<>(leadPage.getRecords(), leadPage.getTotal());
     }
 
