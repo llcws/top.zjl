@@ -2,25 +2,34 @@ package com.crm.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.crm.common.exception.ServerException;
 import com.crm.common.result.PageResult;
 import com.crm.convert.CustomerConvert;
 import com.crm.entity.Customer;
 import com.crm.entity.SysManager;
 import com.crm.mapper.CustomerMapper;
 import com.crm.query.CustomerQuery;
+import com.crm.query.CustomerTrendQuery;
 import com.crm.query.IdQuery;
 import com.crm.security.user.SecurityUser;
 import com.crm.service.CustomerService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.crm.utils.DateUtils;
 import com.crm.utils.ExcelUtils;
+import com.crm.vo.CustomerTrendVO;
 import com.crm.vo.CustomerVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
 
-import java.rmi.ServerException;
-import java.util.List;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+
+import static com.crm.utils.DateUtils.*;
 
 /**
  * <p>
@@ -125,4 +134,51 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
         baseMapper.updateById(customer);
     }
 
+    @Override
+    public Map<String, List> getCustomerTrend(CustomerTrendQuery query) {
+        // 1、X轴展示的时间
+        List<String> timeList = new ArrayList<>();
+        // 2、Y轴展示的数据
+        List<Integer> countList = new ArrayList<>();
+        // 3、Mapper 查询返回的结果
+        List<CustomerTrendVO> result;
+        if ("day".equals(query.getTransactionType())){
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime localDateTime =now.truncatedTo(ChronoUnit.SECONDS);
+            LocalDateTime startTime = now.withHour(0).withMinute(0).withSecond(0).truncatedTo(ChronoUnit.SECONDS);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            List<String> timeRange = new ArrayList<>();
+            timeRange.add(formatter.format(startTime));
+            timeRange.add(formatter.format(localDateTime));
+            timeList = getHourData(timeRange);
+            query.setTimeRange(timeRange);
+            result = baseMapper.getTradeStatistics(query);
+        }else if("monthrange".equals(query.getTransactionType())){
+            query.setTimeFormat("%Y-%m");
+            timeList = getMonthInRange(query.getTimeRange().get(0),query.getTimeRange().get(1));
+            result = baseMapper.getTradeStatisticsByDay(query);
+        }else if("week".equals(query.getTransactionType())){
+            timeList = getWeekInRange(query.getTimeRange().get(0),query.getTimeRange().get(1));
+            result = baseMapper.getTradeStatisticsByWeek(query);
+        }else{
+            query.setTimeFormat("%Y-%m-%d");
+            timeList = getDatesInRange(query.getTimeRange().get(0),query.getTimeRange().get(1));
+            result = baseMapper.getTradeStatisticsByDay(query);
+        }
+
+        //匹配时间点查询到的数据，没有值默认填充0
+        List<CustomerTrendVO> finalResult = result;
+        timeList.forEach((String time) -> {
+            finalResult.stream().filter((CustomerTrendVO item) -> item.getTradeTime().equals(time)).findFirst().ifPresentOrElse((CustomerTrendVO item) -> {
+                countList.add(item.getTradeCount());
+            }, () -> {
+                countList.add(0);
+            });
+        });
+
+        Map<String, List> resultMap = new HashMap<>();
+        resultMap.put("timeList", timeList);
+        resultMap.put("countList", countList);
+        return resultMap;
+    }
 }

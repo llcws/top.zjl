@@ -12,19 +12,22 @@ import java.util.List;
 
 /**
  * <p>
- * Mapper 接口
+ * 管理员表 Mapper 接口
  * </p>
- *
-
  */
 public interface SysManagerMapper extends BaseMapper<SysManager> {
-    default SysManager getByAccountAndType(String account, Integer type) {
-        return this.selectOne(new LambdaQueryWrapper<SysManager>().eq(SysManager::getAccount, account));
-    }
 
     default SysManager getByAccount(String account) {
         return this.selectOne(new LambdaQueryWrapper<SysManager>().eq(SysManager::getAccount, account));
     }
 
     List<SysManagerVO> getManagerPage(Page<SysManagerVO> page, @Param("query") SysManagerQuery query);
+
+    /**
+     * 根据ID查询管理员邮箱（用于邮件通知）
+     */
+    default String getEmailById(Integer managerId) {
+        SysManager manager = this.selectById(managerId);
+        return manager != null ? manager.getEmail() : null;
+    }
 }

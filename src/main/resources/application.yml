@@ -6,6 +6,19 @@ spring:
   mvc:
     path-match:
       matching-strategy: ant_path_matcher #解决
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: 1714646639@qq.com
+    password: uqjhpgyxtajoecec
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
 
 mybatis-plus:

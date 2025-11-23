@@ -22,5 +22,19 @@
         <result column="start_time" property="startTime" />
         <result column="end_time" property="endTime" />
     </resultMap>
-
+    <select id="countByStatus" resultType="com.crm.vo.ContractTrendPieVO">
+        SELECT
+            status,
+            COUNT(*) AS count,
+            -- 状态名称映射（根据实际业务状态值调整）
+            CASE
+                WHEN status = 0 THEN '待审核'
+                WHEN status = 1 THEN '审核中'
+                WHEN status = 2 THEN '已通过'
+                ELSE '其他状态'
+        END AS statusName
+        FROM t_contract
+        WHERE owner_id = #{managerId} -- 关联当前登录用户
+        GROUP BY status
+    </select>
 </mapper>

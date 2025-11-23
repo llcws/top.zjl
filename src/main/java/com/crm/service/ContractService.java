@@ -3,8 +3,13 @@ package com.crm.service;
 import com.crm.common.result.PageResult;
 import com.crm.entity.Contract;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.crm.query.ApprovalQuery;
 import com.crm.query.ContractQuery;
+import com.crm.query.IdQuery;
+import com.crm.vo.ContractTrendPieVO;
 import com.crm.vo.ContractVO;
+
+import java.util.List;
 
 /**
  * <p>
@@ -31,5 +36,11 @@ public interface ContractService extends IService<Contract> {
      */
 
     void saveOrUpdate(ContractVO contractVO);
+
+    // 新增：按合同状态统计饼图数据
+    List<ContractTrendPieVO> getContractStatusPieData();
+
+    void startApproval(IdQuery idQuery) ;
+    void approvalContract(ApprovalQuery query) ;
 
 }

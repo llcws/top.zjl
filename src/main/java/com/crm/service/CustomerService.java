@@ -1,9 +1,11 @@
 package com.crm.service;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.crm.common.result.PageResult;
 import com.crm.entity.Customer;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.crm.query.CustomerQuery;
+import com.crm.query.CustomerTrendQuery;
 import com.crm.query.IdQuery;
 import com.crm.vo.CustomerVO;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.net.http.HttpResponse;
 import java.rmi.ServerException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -33,4 +36,6 @@ public interface CustomerService extends IService<Customer> {
     void customerToPublicPool(IdQuery idQuery) throws ServerException;
     //领取客户
     void publicPoolToPrivate(IdQuery idQuery) throws ServerException;
+
+    Map<String, List> getCustomerTrend(CustomerTrendQuery query);
 }

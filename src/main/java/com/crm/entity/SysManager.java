@@ -23,6 +23,10 @@ public class SysManager {
     @TableField("password")
     private String password;
 
+    // 新增邮箱字段
+    @TableField("email")
+    private String email;
+
     @TableField("status")
     private Integer status;
 
@@ -35,7 +39,4 @@ public class SysManager {
 
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
-
-
-
 }

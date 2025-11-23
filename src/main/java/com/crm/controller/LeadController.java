@@ -1,9 +1,11 @@
 package com.crm.controller;
 
+import com.crm.common.aop.Log;
 import com.crm.common.result.PageResult;
 import com.crm.common.result.Result;
 import com.crm.entity.FollowUp;
 import com.crm.entity.Lead;
+import com.crm.enums.BusinessType;
 import com.crm.query.IdQuery;
 import com.crm.query.LeadQuery;
 import com.crm.service.LeadService;
@@ -29,6 +31,7 @@ public class LeadController {
 
     @PostMapping("page")
     @Operation(summary = "分页查询")
+    @Log(title = "线索管理", businessType = BusinessType.SELECT)
     public Result<PageResult<Lead>> getPage(@RequestBody @Validated LeadQuery query) {
         return Result.ok(leadService.getPage(query));
     }
@@ -36,6 +39,7 @@ public class LeadController {
 
     @PostMapping("saveOrEdit")
     @Operation(summary = "保存或修改")
+    @Log(title = "线索管理", businessType = BusinessType.UPDATE)
     public Result saveOrEdit(@RequestBody @Validated Lead lead) {
         leadService.saveOrEdit(lead);
         return Result.ok();
@@ -43,6 +47,7 @@ public class LeadController {
 
     @PostMapping("convertToCustomer")
     @Operation(summary = "线索转客户")
+    @Log(title = "线索转客户", businessType = BusinessType.UPDATE)
     public Result convertToCustomer(@RequestBody @Validated IdQuery idQuery) {
         leadService.convertToCustomer(idQuery);
         return Result.ok();
@@ -50,6 +55,7 @@ public class LeadController {
 
     @PostMapping("followLead")
     @Operation(summary = "跟进线索")
+    @Log(title = "线索跟进", businessType = BusinessType.UPDATE)
     public Result followLead(@RequestBody @Validated FollowUp followUp) {
         leadService.followLead(followUp);
         return Result.ok();

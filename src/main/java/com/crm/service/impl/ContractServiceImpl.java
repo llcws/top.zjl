@@ -5,30 +5,31 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.crm.common.exception.ServerException;
 import com.crm.common.result.PageResult;
 import com.crm.convert.ContractConvert;
-import com.crm.entity.Contract;
-import com.crm.entity.ContractProduct;
-import com.crm.entity.Customer;
-import com.crm.entity.Product;
-import com.crm.mapper.ContractMapper;
-import com.crm.mapper.ContractProductMapper;
-import com.crm.mapper.ProductMapper;
+import com.crm.entity.*;
+import com.crm.enums.ContractStatusEnum;
+import com.crm.mapper.*;
+import com.crm.query.ApprovalQuery;
 import com.crm.query.ContractQuery;
+import com.crm.query.IdQuery;
 import com.crm.security.user.SecurityUser;
 import com.crm.service.ContractService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.crm.vo.ContractTrendPieVO;
 import com.crm.vo.ContractVO;
 import com.crm.vo.ProductVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
+import jakarta.annotation.Resource;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-
 import static com.crm.utils.NumberUtils.generateContractNumber;
 
 /**
@@ -45,6 +46,9 @@ import static com.crm.utils.NumberUtils.generateContractNumber;
 public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> implements ContractService {
     private final ProductMapper productMapper;
     private final ContractProductMapper contractProductMapper;
+    private final ContractMapper baseMapper;
+    @Autowired
+    private ApprovalMapper approvalMapper;
 
     @Override
     public PageResult<ContractVO> getPage(ContractQuery query) {
@@ -110,6 +114,138 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         // 处理合同商品明细
         handleContractProducts(contract.getId(), contractVO.getProducts());
 
+    }
+
+    @Override
+    public List<ContractTrendPieVO> getContractStatusPieData() {
+        // 获取当前登录用户ID，确保数据权限
+        Integer managerId = SecurityUser.getManagerId();
+        // 调用Mapper方法按状态统计数量（传入用户ID）
+        List<ContractTrendPieVO> pieData = baseMapper.countByStatus(managerId);
+
+        // 计算总数量和占比（基于数量计算）
+        int total = pieData.stream()
+                .mapToInt(ContractTrendPieVO::getCount)
+                .sum();
+
+        pieData.forEach(item -> {
+            // 计算占比（数量/总数量*100）
+            item.setProportion(total > 0 ? (double) item.getCount() / total * 100 : 0);
+        });
+
+        return pieData;
+    }
+    @Autowired
+    private SysManagerMapper sysManagerMapper;
+    @Autowired
+    private EmailService emailService;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void approvalContract(ApprovalQuery query) {
+        Contract contract = baseMapper.selectById(query.getId());
+        if (contract == null) {
+            throw new ServerException("合同不存在");
+        }
+        // 校验合同状态是否为"审核中"
+        if (!ContractStatusEnum.PENDING.getValue().equals(contract.getStatus())) {
+            throw new ServerException("该合同已审核通过，请勿重复操作");
+        }
+
+        // 构建审核内容与目标状态
+        String approvalContent = query.getType() == 0
+                ? "合同审核通过：" + query.getApprovalContent()
+                : "合同审核未通过：" + query.getApprovalContent();
+        Integer contractStatus = query.getType() == 0
+                ? ContractStatusEnum.APPROVED.getValue()
+                : ContractStatusEnum.REJECTED.getValue();
+
+        // 保存审核记录
+        Approval approval = new Approval();
+        approval.setType(0);
+        approval.setStatus(query.getType());
+        approval.setCreaterId(SecurityUser.getManagerId());
+        approval.setContractId(contract.getId());
+        approval.setComment(approvalContent);
+        approvalMapper.insert(approval);
+
+        // 更新合同状态与审核内容
+        contract.setStatus(contractStatus);
+        contract.setApprovalContent(approvalContent);
+        contract.setApproverId(SecurityUser.getManagerId());
+        contract.setApprovalTime(LocalDateTime.now());
+        baseMapper.updateById(contract);
+
+        // 获取创建合同的销售ID（creater_id对应销售管理员ID）
+        Integer salesId = contract.getCreaterId();
+        if (salesId == null) {
+            log.warn("合同[ID:{}]未关联创建人，无法发送审核通知", contract.getId());
+            return;
+        }
+
+        // 查询销售的邮箱信息
+        SysManager sales = sysManagerMapper.selectById(salesId);
+        if (sales == null || StringUtils.isBlank(sales.getEmail())) {
+            log.warn("销售[ID:{}]未设置邮箱，无法发送审核通知", salesId);
+            return;
+        }
+
+        // 发送邮件通知（同时支持通过和未通过）
+        try {
+            String emailSubject = "合同审核通知";
+            String emailContent;
+            if (query.getType() == 0) { // 0 表示审核通过
+                emailContent = String.format(
+                        "您好，%s！\n\n您创建的合同【%s】（编号：%s）已审核通过。\n审核意见：%s\n\n请及时跟进后续流程。",
+                        sales.getNickname(),
+                        contract.getName(),
+                        contract.getNumber(),
+                        query.getApprovalContent()
+                );
+            } else { // 非0 表示审核未通过
+                emailContent = String.format(
+                        "您好，%s！\n\n您创建的合同【%s】（编号：%s）审核未通过。\n审核意见：%s\n\n请查看并处理后重新提交。",
+                        sales.getNickname(),
+                        contract.getName(),
+                        contract.getNumber(),
+                        query.getApprovalContent()
+                );
+            }
+            emailService.sendSimpleEmail(sales.getEmail(), emailSubject, emailContent);
+            log.info("合同[ID:{}]审核{}，已通知销售[ID:{}]",
+                    contract.getId(),
+                    query.getType() == 0 ? "通过" : "未通过",
+                    salesId);
+        } catch (Exception e) {
+            // 邮件发送失败不影响主流程，但记录日志
+            log.error("合同[ID:{}]审核通知邮件发送失败", contract.getId(), e);
+        }
+    }
+
+    // startApproval 方法调整（替换硬编码1）
+    @Override
+    public void startApproval(IdQuery idQuery) {
+        Contract contract = baseMapper.selectById(idQuery.getId());
+        if (contract == null) {
+            throw new ServerException("合同不存在");
+        }
+        // 状态变更为：审核中（枚举值）
+        contract.setStatus(ContractStatusEnum.PENDING.getValue());
+        baseMapper.updateById(contract);
+    }
+
+    @Resource
+    private ContractMapper contractMapper;
+
+
+
+    // 生成当天24小时时间轴（00:00至23:00）
+    private List<String> getHourData() {
+        List<String> hours = new ArrayList<>();
+        for (int i = 0; i < 24; i++) {
+            hours.add(String.format("%02d:00", i));
+        }
+        return hours;
     }
 
     private void handleContractProducts(Integer contractId, List<ProductVO> newProductList) {

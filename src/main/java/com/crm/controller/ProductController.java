@@ -1,8 +1,10 @@
 package com.crm.controller;
 
+import com.crm.common.aop.Log;
 import com.crm.common.result.PageResult;
 import com.crm.common.result.Result;
 import com.crm.entity.Product;
+import com.crm.enums.BusinessType;
 import com.crm.query.ProductQuery;
 import com.crm.service.ProductService;
 import io.swagger.annotations.Api;
@@ -28,11 +30,13 @@ public class ProductController {
 
     @PostMapping("page")
     @Operation(summary = "分⻚查询")
+    @Log(title = "商品管理", businessType = BusinessType.SELECT)
     public Result<PageResult<Product>> getPage(@RequestBody @Validated ProductQuery query) {
         return Result.ok(productService.getPage(query));
     }
     @PostMapping("saveOrEdit")
     @Operation(summary = "保存或修改")
+    @Log(title = "商品管理", businessType = BusinessType.INSERT)
     public Result<Void> saveDrEdit(@RequestBody Product product) {
         productService.saveOrEdit(product);
         return Result.ok();

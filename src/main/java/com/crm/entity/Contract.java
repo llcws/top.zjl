@@ -8,7 +8,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import io.swagger.annotations.ApiModel;
@@ -18,7 +17,7 @@ import lombok.Setter;
 
 /**
  * <p>
- *
+ * 合同实体类
  * </p>
  *
  * @author crm
@@ -27,7 +26,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @TableName("t_contract")
-@ApiModel(value = "Contract对象", description = "")
+@ApiModel(value = "Contract对象", description = "合同信息")
 public class Contract {
 
     @ApiModelProperty("主键id")
@@ -52,7 +51,7 @@ public class Contract {
 
     @ApiModelProperty("签约时间")
     @TableField("sign_time")
-    private LocalDate signTime;
+    private LocalDateTime signTime; // 类型调整为LocalDateTime，支持时分秒
 
     @ApiModelProperty("客户id")
     @TableField("customer_id")
@@ -62,13 +61,29 @@ public class Contract {
     @TableField("opportunity_id")
     private Integer opportunityId;
 
-    @ApiModelProperty("合同状态 0-初始化，1-审核通过，2-审核未通过")
+    /**
+     * 合同状态
+     * 0-初始化，1-审核中，2-审核通过，3-审核不通过
+     */
+    @ApiModelProperty("合同状态 0-初始化，1-审核中，2-审核通过，3-审核不通过")
     @TableField("status")
     private Integer status;
 
     @ApiModelProperty("备注")
     @TableField("remark")
     private String remark;
+
+    @ApiModelProperty("审核内容（通过/不通过原因）")
+    @TableField("approval_content")
+    private String approvalContent;
+
+    @ApiModelProperty("审核人id")
+    @TableField("approver_id")
+    private Integer approverId;
+
+    @ApiModelProperty("审核时间")
+    @TableField("approval_time")
+    private LocalDateTime approvalTime;
 
     @ApiModelProperty("逻辑删除 0-未删除，1-已删除")
     @TableField(value = "delete_flag", fill = FieldFill.INSERT)
@@ -93,9 +108,12 @@ public class Contract {
 
     @ApiModelProperty("合同开始时间")
     @TableField("start_time")
-    private LocalDate startTime;
+    private LocalDateTime startTime; // 类型调整为LocalDateTime，支持时分秒
 
     @ApiModelProperty("合同结束时间")
     @TableField("end_time")
-    private LocalDate endTime;
+    private LocalDateTime endTime; // 类型调整为LocalDateTime，支持时分秒
+
+    @TableField("sales_id")
+    private Long salesId;
 }

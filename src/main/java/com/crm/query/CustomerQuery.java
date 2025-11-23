@@ -21,4 +21,5 @@ public class CustomerQuery extends Query {
     private Integer followStatus;
     @Schema(description = "0-客户列表，1-公海列表")
     private Integer isPublic;
+
 }

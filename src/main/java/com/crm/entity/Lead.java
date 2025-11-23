@@ -78,7 +78,7 @@ public class Lead {
 
     @ApiModelProperty("线索状态")
     @TableField("status")
-    private Integer status;
+    private Integer status=0;
 
     @ApiModelProperty("逻辑删除")
     @TableField(value = "delete_flag", fill = FieldFill.INSERT)
