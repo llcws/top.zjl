@@ -19,4 +19,26 @@
         <result column="update_time" property="updateTime" />
     </resultMap>
 
+    <!-- main/resources/mapper/PaymentMapper.xml -->
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT * FROM t_payment
+        WHERE delete_flag = 0
+        <if test="query.contractNumber != null and query.contractNumber != ''">
+            AND contract_number LIKE CONCAT('%', #{query.contractNumber}, '%')
+        </if>
+        <if test="query.contractName != null and query.contractName != ''">
+            AND contract_name LIKE CONCAT('%', #{query.contractName}, '%')
+        </if>
+        <if test="query.status != null">
+            AND status = #{query.status}
+        </if>
+        <if test="query.paymentMethod != null">
+            AND payment_method = #{query.paymentMethod}
+        </if>
+        <if test="query.customerId != null">
+            AND customer_id = #{query.customerId}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
 </mapper>

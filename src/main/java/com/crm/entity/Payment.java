@@ -69,7 +69,7 @@ public class Payment {
     @ApiModelProperty("逻辑删除 0-未删除，1-已删除")
     @TableField(value = "delete_flag", fill = FieldFill.INSERT)
     @TableLogic
-    private Byte deleteFlag;
+    private Integer deleteFlag;
 
     @ApiModelProperty("创建时间")
     @TableField(value = "create_time", fill = FieldFill.INSERT)

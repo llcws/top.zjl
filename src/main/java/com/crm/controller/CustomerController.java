@@ -80,7 +80,7 @@ public class CustomerController {
     @PostMapping("toPrivate")
     @Operation(summary = "领取客户")
     @Log(title = "领取客户参数", businessType = BusinessType.UPDATE)
-    public Result publicPoolToPrivate(@RequestBody @Validated IdQuery idQuery) throws java.rmi.ServerException {
+    public Result  publicPoolToPrivate(@RequestBody @Validated IdQuery idQuery) throws java.rmi.ServerException {
         customerService.publicPoolToPrivate(idQuery);
         return Result.ok();
     }

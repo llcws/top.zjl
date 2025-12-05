@@ -1,6 +1,7 @@
 package com.crm.common.result;
 
 import com.crm.common.exception.ErrorCode;
+import com.crm.vo.PaymentVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -47,4 +48,7 @@ public class Result<T> {
         result.setMsg(msg);
         return result;
     }
+
+
+
 }

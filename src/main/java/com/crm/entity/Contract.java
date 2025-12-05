@@ -116,4 +116,5 @@ public class Contract {
 
     @TableField("sales_id")
     private Long salesId;
+
 }
