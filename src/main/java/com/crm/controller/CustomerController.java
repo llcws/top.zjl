@@ -37,6 +37,25 @@ import java.util.Map;
 public class CustomerController {
     private final CustomerService customerService;
 
+    // ========== 新增：前端下拉框用的列表接口 ==========
+    @PostMapping("list")
+    @Operation(summary = "客户列表-不分页（下拉框用）")
+    @Log(title = "客户列表-不分页", businessType = BusinessType.SELECT)
+    public Result<List<CustomerVO>> getList(@RequestBody(required = false) CustomerQuery query) {
+        // 1. 处理空参数：如果前端没传参，初始化默认查询条件
+        if (query == null) {
+            query = new CustomerQuery();
+        }
+        // 2. 设置分页参数为“查所有”：页码1，每页条数设为极大值（如10000）
+        query.setPageNum(1);
+        query.setPageSize(10000);
+        // 3. 复用现有分页查询方法
+        PageResult<CustomerVO> pageResult = customerService.getPage(query);
+        // 4. 只返回数据列表（前端下拉框只需list，不需要分页信息）
+        return Result.ok(pageResult.getList());
+    }
+
+    // ========== 以下是你原有代码，无需修改 ==========
     @PostMapping("page")
     @Operation(summary = "客户列表-分页")
     @Log(title = "客户列表-分页参数", businessType = BusinessType.SELECT)
@@ -58,6 +77,7 @@ public class CustomerController {
         customerService.saveOrUpdate(customerVO);
         return Result.ok();
     }
+
     @PostMapping("remove")
     @Operation(summary = "删除客户信息")
     @Log(title = "删除客户信息参数", businessType = BusinessType.DELETE)

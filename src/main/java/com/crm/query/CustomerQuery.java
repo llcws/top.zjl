@@ -21,5 +21,8 @@ public class CustomerQuery extends Query {
     private Integer followStatus;
     @Schema(description = "0-客户列表，1-公海列表")
     private Integer isPublic;
-
+    @Schema(description = "查询页码")
+    private Integer pageNum=1;
+    @Schema(description = "查询页码大小")
+    private Integer pageSize=10;
 }

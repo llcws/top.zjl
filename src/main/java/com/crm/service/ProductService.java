@@ -9,6 +9,7 @@ import com.crm.query.ProductQuery;
 import com.crm.vo.CustomerVO;
 import com.crm.vo.ProductVO;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.rmi.ServerException;
 import java.util.List;
@@ -40,6 +41,7 @@ public interface ProductService extends IService<Product> {
     void batchUpdateProductStatus();
 
 
-
+    @Transactional(rollbackFor = Exception.class)
+    void updateShelfTime(Long productId, String onShelfTime, String offShelfTime);
 
 }
